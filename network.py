@@ -26,19 +26,26 @@ class MqttMixin:
 
     def set_topic(self, topic):
         self.topic = topic
-        self.msg_q.subscribe(topic)
+        self.msg_q.subscribe(MQTT_TOPIC_PREFIX + topic)
 
     def on_msg(self, client, userdata, msg):
         raise NotImplementedError()
 
-    def send_msg(self, msg):
-        self.msg_q.publish(topic=self.topic, payload=msg)
+    def send_msg(self, msg, topic=None):
+        if topic is None:
+            topic = self.topic
+        self.msg_q.publish(topic=topic, payload=msg)
 
     def update_status(self, status):
-        self.send_msg(self.format_msg(status))
+        self.send_msg(msg=self.format_msg(status),
+                      topic=MQTT_TOPIC_PREFIX + ALARM_SERVICE_MQTT_TOPIC)
 
-    def format_msg(self, *args, **kwargs):
-        raise NotImplementedError()
+    def format_msg(self, status):
+        return '{}: {}'.format(self.topic, status)
+
+    def parse_msg(self, msg):
+        service, status = msg.payload.decode().split(': ')
+        return service, status
 
 
 def arping(check_mac=True):
