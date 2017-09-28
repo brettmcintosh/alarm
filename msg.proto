@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package msg;
+
+message Update {
+    enum Service {
+        ARPING = 0;
+        DOOR = 1;
+        PIR = 2;
+        CAMERA = 3;
+    }
+    enum Status {
+        OK = 0;
+        TROUBLE = 1;
+        ARMED = 2;
+        DISARMED = 3;
+        MALFUNCTIONING = 4;
+    }
+    Service service_name = 1;
+    Status status = 2;
+}
+
+message Command {
+    enum Do {
+        ARM = 0;
+        DISARM = 1;
+        START_RECORD = 2;
+        STOP_RECORD = 3;
+        PANIC = 4;
+    }
+    Do command = 1;
+}

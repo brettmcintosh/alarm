@@ -1,8 +1,9 @@
-import paho.mqtt.client as mqtt_client
-
 import subprocess
 
+import paho.mqtt.client as mqtt_client
 from settings import *
+
+from msg_pb2 import Update
 
 
 class MqttConnection(mqtt_client.Client):
@@ -36,16 +37,21 @@ class MqttMixin:
             topic = self.topic
         self.msg_q.publish(topic=topic, payload=msg)
 
-    def update_status(self, status):
-        self.send_msg(msg=self.format_msg(status),
+    def update_status(self, update):
+        self.send_msg(msg=self.serialize(update),
                       topic=MQTT_TOPIC_PREFIX + ALARM_SERVICE_MQTT_TOPIC)
 
-    def format_msg(self, status):
-        return '{}: {}'.format(self.topic, status)
+    def send_command(self, command, topic):
+        self.send_msg(msg=self.serialize(command),
+                      topic=MQTT_TOPIC_PREFIX + topic)
 
-    def parse_msg(self, msg):
-        service, status = msg.payload.decode().split(': ')
-        return service, status
+    def serialize(self, obj):
+        return obj.SerializeToString()
+
+    def parse_update(self, msg):
+        update = Update()
+        update.ParseFromString(msg.payload)
+        return update
 
 
 def arping(check_mac=True):

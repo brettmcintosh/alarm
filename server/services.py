@@ -1,12 +1,10 @@
 import subprocess
 from time import sleep
 
-from network import arping, MqttMixin
+from msg_pb2 import Command, Update
 from settings import *
 
-
-OK = 'ok'
-TROUBLE = 'trouble'
+from network import arping, MqttMixin
 
 
 class AlarmService(MqttMixin):
@@ -22,41 +20,52 @@ class AlarmService(MqttMixin):
 
     def arm(self):
         self.status = self.ARMED
+        self.arm_door()
+
+    def arm_door(self):
+        cmd = Command()
+        cmd.command = cmd.ARM
+        self.send_command(cmd, 'door')
+
+    def disarm_door(self):
+        cmd = Command()
+        cmd.command = cmd.DISARM
+        self.send_command(cmd, 'door')
 
     def disarm(self):
         self.status = self.OFF
+        self.disarm_door()
 
     def trigger(self):
         self.status = self.TRIGGERED
 
     def on_msg(self, client, userdata, msg):
-        self.consume_msg(msg)
+        self.consume_update(self.parse_update(msg))
 
-    def consume_msg(self, msg):
-        service, status = self.parse_msg(msg)
-        print('{} updated its status with {}'.format(service, status))
-        if service == ARPING_MQTT_TOPIC:
-            if self.check_departure(status):
+    def consume_update(self, update):
+        if update.service_name == update.ARPING:
+            if self.check_departure(update):
                 print('departed')
                 self.arm()
-            elif self.check_return(status):
+            elif self.check_return(update):
                 print('returned')
                 self.disarm()
         else:
-            if self.check_trigger(status):
+            print('update {}'.format(update))
+            if self.check_trigger(update):
                 print('triggered')
                 self.trigger()
 
         print('alarm status is {}'.format(self.status))
 
-    def check_departure(self, status):
-        return self.status == self.OFF and status == TROUBLE
+    def check_departure(self, update):
+        return self.status == self.OFF and update.status == Update.TROUBLE
 
-    def check_return(self, status):
-        return self.status == self.ARMED and status == OK
+    def check_return(self, update):
+        return self.status == self.ARMED and update.status == Update.OK
 
-    def check_trigger(self, status):
-        return self.status == self.TRIGGERED and status == TROUBLE
+    def check_trigger(self, update):
+        return self.status == self.ARMED and update.status == Update.TROUBLE
 
 
 class ArpingService(MqttMixin):
@@ -73,12 +82,15 @@ class ArpingService(MqttMixin):
             sleep(ARPING_FREQUENCY_SECONDS)
 
     def ping_device(self):
+        update = Update()
+        update.service_name = update.ARPING
         try:
             arping(check_mac=True)
         except subprocess.CalledProcessError:
-            self.update_status(TROUBLE)
+            update.status = update.TROUBLE
         else:
-            self.update_status(OK)
+            update.status = update.OK
+        self.update_status(update)
 
     def on_msg(self, client, userdata, msg):
         print(msg.payload)
