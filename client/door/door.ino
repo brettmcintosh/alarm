@@ -4,20 +4,15 @@
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include "msg.pb.h"
+#include "app.h"
 
 #define PIR_PIN 14
 #define DOOR_PIN 12
 
-#define ALARM_MQTT_TOPIC "alarm/alarm"
-#define DOOR_MQTT_TOPIC "alarm/door"
 #define SERVICE_NAME msg_Update_Service_DOOR
 #define PIR_SCAN_FREQUENCY_MS 2000
 #define DOOR_SCAN_FREQUENCY_MS 1000
 #define OK_UPDATE_FREQUENCY_MS 15000
-
-const char* ssid = "Mojave";
-const char* password = "2856d18b84c94ab1b1e3";
-const char* mqtt_server = "192.168.44.144";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -33,25 +28,7 @@ size_t msg_length;
 bool armed;
 bool triggered;
 
-void setup_wifi() {
-    delay(10);
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-
-    WiFi.begin(ssid, password);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-
-    randomSeed(micros());
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-}
+std::unique_ptr<App> app;
 
 void reconnect() {
     // Loop until we're reconnected
@@ -90,11 +67,13 @@ void setup() {
     pinMode(DOOR_PIN, INPUT);
     Serial.begin(115200);
 
-    client.setServer(mqtt_server, 1883);
-    client.setCallback(on_msg);
-    setup_wifi();
+//    client.setServer(mqtt_server, 1883);
+//    client.setCallback(on_msg);
+    app = std::unique_ptr<App>(new App);
+    app->init();
 
     armed = false;
+    Serial.println("Alarm started as disarmed.");
 }
 
 void loop() {
