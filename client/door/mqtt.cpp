@@ -1,35 +1,54 @@
 #include "mqtt.h"
-#include "wifi.h"
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-#include <memory>
 
 MqttConnection::MqttConnection() {
     client = PubSubClient(wifi);
 }
 
 bool MqttConnection::setup() {
+    client.setServer(MQTT_SERVER, 1883);
     while (!client.connected()) {
         Serial.print("Attempting MQTT connection...");
-        // Create a random client ID
         String clientId = "DOOR";
-        // Attempt to connect
         if (client.connect(clientId.c_str())) {
-            Serial.println("connected");
-            client.subscribe(DOOR_MQTT_TOPIC);
+            Serial.println("Connected");
         } else {
-            Serial.print("failed, rc=");
+            Serial.print("Failed, error: ");
             Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
             delay(5000);
         }
     }
 }
 
+void MqttConnection::loop() {
+    if (!is_connected()) {
+        setup();
+    }
+    client.loop();
+}
+
 bool MqttConnection::is_connected() {
-    Serial.println();
-    return WiFi.status() ==  WL_CONNECTED;
+    return client.connected();
+}
+
+void MqttConnection::publish(std::unique_ptr<Sensor>& sensor, msg_Update_Status status) {
+    msg_Update update = msg_Update_init_zero;
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+    update.service_name = sensor->name;
+    update.status = status;
+
+    if (!pb_encode(&stream, msg_Update_fields, &update)) {
+        Serial.println("encoding failed");
+        Serial.println(PB_GET_ERROR(&stream));
+    }
+    else {
+        if (!client.publish(sensor->topic, buffer, stream.bytes_written)) {
+            Serial.println("Failed to publish buffer to topic");
+        }
+        else {
+            Serial.print("Sent msg with length ");
+            Serial.println(stream.bytes_written);
+        }
+    }
 }
 
 std::unique_ptr<MqttConnection> MqttConnection::create() {

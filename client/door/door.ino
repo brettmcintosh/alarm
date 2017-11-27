@@ -8,175 +8,31 @@
 
 #define PIR_PIN 14
 #define DOOR_PIN 12
-
-#define SERVICE_NAME msg_Update_Service_DOOR
 #define PIR_SCAN_FREQUENCY_MS 2000
 #define DOOR_SCAN_FREQUENCY_MS 1000
-#define OK_UPDATE_FREQUENCY_MS 15000
 
-WiFiClient espClient;
-PubSubClient client(espClient);
 long next_pir_scan_ms = 0;
 long next_door_scan_ms = 0;
 long next_pir_ok_update_ms = 0;
 long next_door_ok_update_ms = 0;
-char msg[50];
-
-uint8_t buffer[128];
-size_t msg_length;
-
-bool armed;
-bool triggered;
 
 std::unique_ptr<App> app;
 
-void reconnect() {
-    // Loop until we're reconnected
-    while (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        // Create a random client ID
-        String clientId = "DOOR";
-        // Attempt to connect
-        if (client.connect(clientId.c_str())) {
-            Serial.println("connected");
-            client.subscribe(DOOR_MQTT_TOPIC);
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
-            delay(5000);
-        }
-    }
-}
-
-void on_msg(char* topic, byte* payload, unsigned int length) {
-    Serial.print("Message arrived [");
-    Serial.print(topic);
-    Serial.print("] ");
-    for (int i = 0; i < length; i++) {
-        Serial.print((char)payload[i]);
-    }
-    Serial.println();
-
-    parse_command(payload, length);
-}
-
 void setup() {
-    pinMode(PIR_PIN, INPUT);
-    pinMode(DOOR_PIN, INPUT);
     Serial.begin(115200);
 
-//    client.setServer(mqtt_server, 1883);
-//    client.setCallback(on_msg);
     app = std::unique_ptr<App>(new App);
     app->init();
+    Serial.println("App initialized");
 
-    armed = false;
-    Serial.println("Alarm started as disarmed.");
+    app->add_sensor(msg_Update_Service_PIR, "alarm/pir",
+        PIR_PIN, PIR_SCAN_FREQUENCY_MS);
+    app->add_sensor(msg_Update_Service_DOOR, "alarm/door",
+        DOOR_PIN, DOOR_SCAN_FREQUENCY_MS);
+
+    Serial.println("Sensors up");
 }
 
 void loop() {
-    if (!client.connected()) {
-        reconnect();
-    }
-    client.loop();
-
-    if (armed && !triggered) {
-        if (millis() >= next_pir_scan_ms) {
-            scan_pir();
-        }
-//        if (millis() >= next_door_scan_ms) {
-//            scan_door();
-//        }
-    }
-}
-
-void scan_pir() {
-    if (digitalRead(PIR_PIN) == HIGH) {
-        Serial.println("PIR TROUBLE");
-        send_update(ALARM_MQTT_TOPIC, msg_Update_Status_TROUBLE);
-        trigger();
-    }
-    else {
-        Serial.println("PIR OK");
-        if (millis() >= next_pir_ok_update_ms) {
-            send_update(ALARM_MQTT_TOPIC, msg_Update_Status_OK);
-            next_pir_ok_update_ms = millis() + OK_UPDATE_FREQUENCY_MS;
-        }
-    }
-    next_pir_scan_ms = millis() + PIR_SCAN_FREQUENCY_MS;
-}
-
-void scan_door() {
-    if (digitalRead(DOOR_PIN) == HIGH) {
-        Serial.println("DOOR TROUBLE");
-        send_update(ALARM_MQTT_TOPIC, msg_Update_Status_TROUBLE);
-        trigger();
-    }
-    else {
-        Serial.println("DOOR OK");
-        if (millis() > next_door_ok_update_ms) {
-            send_update(ALARM_MQTT_TOPIC, msg_Update_Status_OK);
-            next_door_ok_update_ms = millis() + OK_UPDATE_FREQUENCY_MS;
-        }
-    }
-    next_door_scan_ms = millis() + PIR_SCAN_FREQUENCY_MS;
-}
-
-void send_update(char* topic, msg_Update_Status update_status) {
-    msg_Update update = msg_Update_init_zero;
-    pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-    update.service_name = SERVICE_NAME;
-    update.status = update_status;
-
-    if (!pb_encode(&stream, msg_Update_fields, &update)) {
-        Serial.println("encoding failed");
-        Serial.println(PB_GET_ERROR(&stream));
-    }
-    else {
-        if (!client.publish(topic, buffer, stream.bytes_written)) {
-            Serial.println("Failed to publish buffer to topic");
-        }
-        else {
-            Serial.print("Sent msg with length ");
-            Serial.println(stream.bytes_written);
-        }
-    }
-}
-
-void parse_command(byte* command_buf, unsigned int length) {
-    msg_Command command = msg_Command_init_zero;
-    pb_istream_t stream = pb_istream_from_buffer(buffer, length);
-    if (!pb_decode(&stream, msg_Command_fields, &command)) {
-        Serial.println("decoding failed");
-    }
-    else {
-        if (command.command == msg_Command_Do_ARM) {
-            arm();
-            Serial.println("armed");
-            send_update(ALARM_MQTT_TOPIC, msg_Update_Status_ARMED);
-        }
-        else if (command.command == msg_Command_Do_DISARM) {
-            disarm();
-            Serial.println("disarmed");
-            send_update(ALARM_MQTT_TOPIC, msg_Update_Status_DISARMED);
-        }
-    }
-}
-
-void arm() {
-    armed = true;
-    triggered = false;
-}
-
-void disarm() {
-    armed = false;
-    triggered = false;
-}
-
-void trigger() {
-    if (armed) {
-        triggered = true;
-    }
+    app->loop();
 }
