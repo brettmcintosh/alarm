@@ -1,11 +1,12 @@
 #include "mqtt.h"
 
-MqttConnection::MqttConnection() {
+MqttConnection::MqttConnection(String server_name) {
+    mqtt_server = server_name;
     client = PubSubClient(wifi);
 }
 
 bool MqttConnection::setup() {
-    client.setServer(MQTT_SERVER, 1883);
+    client.setServer(mqtt_server.c_str(), 1883);
     while (!client.connected()) {
         Serial.print("Attempting MQTT connection...");
         String clientId = "DOOR";
@@ -52,6 +53,6 @@ void MqttConnection::publish(std::vector<Sensor>::iterator& sensor, msg_Update_S
     }
 }
 
-std::unique_ptr<MqttConnection> MqttConnection::create() {
-    return std::unique_ptr<MqttConnection> (new MqttConnection());
+std::unique_ptr<MqttConnection> MqttConnection::create(String server_name) {
+    return std::unique_ptr<MqttConnection> (new MqttConnection(server_name));
 }

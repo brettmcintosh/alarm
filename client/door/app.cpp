@@ -1,9 +1,9 @@
 #include "app.h"
 
-bool App::init() {
+bool App::init(String server_name) {
     wifi = WifiConnection::create();
     wifi->setup();
-    mqtt = MqttConnection::create();
+    mqtt = MqttConnection::create(server_name);
     mqtt->setup();
 }
 

@@ -12,6 +12,7 @@
 #define DOOR_SCAN_FREQUENCY_MS 1000
 #define PIR_TOPIC "alarm/pir"
 #define DOOR_TOPIC "alarm/door"
+#define MQTT_SERVER "192.168.44.175"
 
 std::unique_ptr<App> app;
 
@@ -19,7 +20,7 @@ void setup() {
     Serial.begin(115200);
 
     app = std::unique_ptr<App>(new App);
-    app->init();
+    app->init(MQTT_SERVER);
     Serial.println("App initialized");
 
     Serial.println(PIR_TOPIC);

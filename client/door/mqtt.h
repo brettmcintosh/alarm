@@ -9,19 +9,17 @@
 #include "msg.pb.h"
 #include "wifi.h"
 
-#define MQTT_SERVER "192.168.44.175"
-
 class MqttConnection {
-    const char* mqtt_server;
+    String mqtt_server;
     uint8_t buffer[128];
     size_t msg_length;
     PubSubClient client;
     WiFiClient wifi;
     public:
-        MqttConnection();
+        MqttConnection(String server_name);
         bool setup();
         void loop();
         bool is_connected();
         void publish(std::vector<Sensor>::iterator& sensor, msg_Update_Status status);
-        static std::unique_ptr<MqttConnection> create();
+        static std::unique_ptr<MqttConnection> create(String server_name);
 };
