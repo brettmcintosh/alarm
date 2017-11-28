@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <memory>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -7,7 +8,7 @@
 #include "msg.pb.h"
 #include "wifi.h"
 
-#define MQTT_SERVER "192.168.44.102"
+#define MQTT_SERVER "192.168.44.175"
 
 class MqttConnection {
     const char* mqtt_server;

@@ -12,18 +12,19 @@ void App::loop() {
     mqtt->loop();
     for (std::vector<std::unique_ptr<Sensor>>::iterator s = sensors.begin();
             s != sensors.end(); ++s) {
-        Serial.println("Reading sensor: " + (*s)->name);
-        if ((*s)->read()) {
-            mqtt->publish(*s, msg_Update_Status_TROUBLE);
-        }
-        else {
-            mqtt->publish(*s, msg_Update_Status_OK);
+        if ((*s)->time_to_read()) {
+            if ((*s)->read()) {
+                mqtt->publish(*s, msg_Update_Status_TROUBLE);
+            }
+            else {
+                mqtt->publish(*s, msg_Update_Status_OK);
+            }
         }
     }
 }
 
 
-void App::add_sensor(msg_Update_Service name, const char* topic,
-        uint8_t pin, int read_frequency) {
-    sensors.push_back(Sensor::create(name, topic, pin, read_frequency));
+void App::add_sensor(msg_Update_Service name, String topic,
+        uint8_t pin, long read_frequency_ms) {
+    sensors.push_back(Sensor::create(name, topic, pin, read_frequency_ms));
 }

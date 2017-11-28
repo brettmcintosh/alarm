@@ -2,7 +2,6 @@
 #include <vector>
 #include "mqtt.h"
 #include "msg.pb.h"
-//#include "wifi.h"
 
 class App {
     std::vector<std::unique_ptr<Sensor>> sensors;
@@ -11,6 +10,6 @@ class App {
         std::unique_ptr<MqttConnection> mqtt;
         bool init();
         void loop();
-        void add_sensor(msg_Update_Service name, const char* topic,
-            uint8_t pin, int read_frequency);
+        void add_sensor(msg_Update_Service name, String topic,
+            uint8_t pin, long read_frequency_ms);
 };

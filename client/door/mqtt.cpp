@@ -12,8 +12,8 @@ bool MqttConnection::setup() {
         if (client.connect(clientId.c_str())) {
             Serial.println("Connected");
         } else {
-            Serial.print("Failed, error: ");
-            Serial.print(client.state());
+            Serial.print("Failed with error: ");
+            Serial.println(client.state());
             delay(5000);
         }
     }
@@ -21,6 +21,7 @@ bool MqttConnection::setup() {
 
 void MqttConnection::loop() {
     if (!is_connected()) {
+        Serial.println("Running reconnect");
         setup();
     }
     client.loop();
@@ -41,7 +42,7 @@ void MqttConnection::publish(std::unique_ptr<Sensor>& sensor, msg_Update_Status 
         Serial.println(PB_GET_ERROR(&stream));
     }
     else {
-        if (!client.publish(sensor->topic, buffer, stream.bytes_written)) {
+        if (!client.publish(sensor->get_topic(), buffer, stream.bytes_written)) {
             Serial.println("Failed to publish buffer to topic");
         }
         else {
