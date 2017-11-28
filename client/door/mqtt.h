@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <memory>
+#include <vector>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <pb_encode.h>
@@ -21,6 +22,6 @@ class MqttConnection {
         bool setup();
         void loop();
         bool is_connected();
-        void publish(std::unique_ptr<Sensor>& sensor, msg_Update_Status status);
+        void publish(std::vector<Sensor>::iterator& sensor, msg_Update_Status status);
         static std::unique_ptr<MqttConnection> create();
 };

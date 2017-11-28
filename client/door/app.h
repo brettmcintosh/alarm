@@ -4,7 +4,7 @@
 #include "msg.pb.h"
 
 class App {
-    std::vector<std::unique_ptr<Sensor>> sensors;
+    std::vector<Sensor> sensors;
     std::unique_ptr<WifiConnection> wifi;
     public:
         std::unique_ptr<MqttConnection> mqtt;

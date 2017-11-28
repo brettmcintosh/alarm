@@ -31,7 +31,7 @@ bool MqttConnection::is_connected() {
     return client.connected();
 }
 
-void MqttConnection::publish(std::unique_ptr<Sensor>& sensor, msg_Update_Status status) {
+void MqttConnection::publish(std::vector<Sensor>::iterator& sensor, msg_Update_Status status) {
     msg_Update update = msg_Update_init_zero;
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
     update.service_name = sensor->name;
